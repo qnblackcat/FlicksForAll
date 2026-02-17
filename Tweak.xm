@@ -14,7 +14,9 @@
 #include "h/UIKBKeyViewAnimator.h"
 #include <dlfcn.h>
 #include <version.h>
+
 #include "Utils.h"
+#include <roothide.h>
 
 #ifndef FP_NO_CEPHEI
 #include <Cephei/HBPreferences.h>
@@ -609,7 +611,8 @@ static void syncPreferences() {
 		syncPreferences();
 	}];
 #else
-	preferences = [[NSUserDefaults alloc] _initWithSuiteName:@"org.wuffs.flickplus" container:[NSURL URLWithString:@"/var/mobile"]];
+	NSURL *containerURL = [NSURL fileURLWithPath:jbroot(@"/var/mobile") isDirectory:YES];
+	preferences = [[NSUserDefaults alloc] _initWithSuiteName:@"org.wuffs.flickplus" container:containerURL];
 	// TODO watch for a thing, probably
 	syncPreferences();
 #endif

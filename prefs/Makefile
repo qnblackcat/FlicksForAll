@@ -1,4 +1,7 @@
+TARGET=iphone:clang:16.5:16.0
+
 include $(THEOS)/makefiles/common.mk
+
 
 BUNDLE_NAME = FlickPlusPrefs
 ARCHS = arm64 arm64e
@@ -8,7 +11,7 @@ FlickPlusPrefs_INSTALL_PATH = /Library/PreferenceBundles
 FlickPlusPrefs_FRAMEWORKS = UIKit
 FlickPlusPrefs_EXTRA_FRAMEWORKS += Cephei CepheiPrefs
 FlickPlusPrefs_PRIVATE_FRAMEWORKS = Preferences
-FlickPlusPrefs_CFLAGS = -fobjc-arc
+FlickPlusPrefs_CFLAGS = -fobjc-arc -Wno-c++11-extensions -Wno-unguarded-availability-new -Wno-deprecated-declarations
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 

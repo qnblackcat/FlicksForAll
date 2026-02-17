@@ -1,18 +1,16 @@
+TARGET=iphone:clang:16.5:16.0
+
 INSTALL_TARGET_PROCESSES = SpringBoard
 
-ifeq ($(FP_SIMULATOR),1)
-TARGET = simulator:clang::13.2
-ARCHS = x86_64
-else
 ARCHS = arm64 arm64e
-endif
+
 
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = flickplus
 
 flickplus_FILES = Tweak.xm Utils.m
-flickplus_CFLAGS = -fobjc-arc
+flickplus_CFLAGS = -fobjc-arc -Wno-c++11-extensions
 ifeq ($(FP_SIMULATOR),1)
 flickplus_CFLAGS += -DFP_NO_CEPHEI
 else
