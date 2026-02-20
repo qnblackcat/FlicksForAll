@@ -49,16 +49,11 @@ static id kbFetchProp(NSString *key) {
 	return value;
 }
 
-@interface _UIClickFeedbackGenerator : UIFeedbackGenerator
--(id)initWithCoordinateSpace:(id)arg1;
--(void)pressedDown;
--(void)pressedUp;
-@end
+
 
 static bool lieAboutGestureKeys = false;
 static bool doingDragOnKey = false;
-static _UIClickFeedbackGenerator *clickFeedback = nil;
-static bool lastFeedbackWasDown = false;
+static UISelectionFeedbackGenerator *clickFeedback = nil;
 
 %hook UIKeyboardTouchInfo
 %property (nonatomic, assign) bool fpAllow;
@@ -88,10 +83,7 @@ static bool lastFeedbackWasDown = false;
 	if (touchInfo.fpAllow) {
 		// this lets a continuous path happen
 		if (clickFeedback != nil) {
-			// if we played a click-down feedback, nullify it
-			// to signal to the user that the flick is now off-limitsb
-			if (lastFeedbackWasDown)
-				[clickFeedback pressedUp];
+			// cancel any pending haptic generator
 			clickFeedback = nil;
 		}
 
@@ -103,13 +95,11 @@ static bool lastFeedbackWasDown = false;
 	}
 }
 
-- (void)updatePanAlternativesForTouchInfo:(UIKeyboardTouchInfo *)touchInfo {
+-(void)updatePanAlternativesForTouchInfo:(UIKeyboardTouchInfo *)touchInfo {
 	if (clickFeedback == nil && hapticFeedbackEnabled) {
-		// delaying the prepare call might be possible slightly
-		// to potentially save a bit of battery
-		clickFeedback = [[_UIClickFeedbackGenerator alloc] initWithCoordinateSpace:self];
+		// Extra-light feedback while sliding through variants
+		clickFeedback = [UISelectionFeedbackGenerator new];
 		[clickFeedback prepare];
-		lastFeedbackWasDown = false;
 	}
 
 	doingDragOnKey = true;
@@ -128,13 +118,9 @@ static bool lastFeedbackWasDown = false;
 - (void)setSelectedVariantIndex:(long long)index {
 	if (doingDragOnKey && clickFeedback != nil) {
 		if (self.selectedVariantIndex != index) {
-			if (index == 0 || index == 1) {
-				[clickFeedback pressedDown];
-				lastFeedbackWasDown = true;
-			} else {
-				[clickFeedback pressedUp];
-				lastFeedbackWasDown = false;
-			}
+			// Extra-light tick while sliding through variants
+			[clickFeedback selectionChanged];
+			[clickFeedback prepare];
 		}
 	}
 	%orig;
@@ -588,7 +574,7 @@ static void syncPreferences() {
 	lightSymbolsColour = resolveColour([preferences objectForKey:@"lightSymbols"]);
 	darkSymbolsColour = resolveColour([preferences objectForKey:@"darkSymbols"]);
 	hapticFeedbackEnabled = [preferences boolForKey:@"hapticFeedback"];
-	symbolFontScale = [preferences boolForKey:@"smallSymbols"] ? 0.7 : 1.0;
+	symbolFontScale = 0.7;
     flickRadius = resolveFlickRadius([preferences objectForKey:@"flickRadius"]);
 	[kbPropCache removeAllObjects];
 	[[%c(UIKeyboardCache) sharedInstance] purge];
@@ -599,18 +585,17 @@ static void syncPreferences() {
 %ctor {
 	kbPropCache = [NSMutableDictionary dictionary];
 
-#ifndef FP_NO_CEPHEI
+ #ifndef FP_NO_CEPHEI
 	preferences = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
 	[preferences registerDefaults:@{
 		@"lightSymbols": @"lgrey",
 		@"darkSymbols": @"lgrey",
-		@"hapticFeedback": @YES,
-		@"smallSymbols": @NO
+		@"hapticFeedback": @YES
 	}];
 	[preferences registerPreferenceChangeBlock:^{
 		syncPreferences();
 	}];
-#else
+ #else
 	NSURL *containerURL = [NSURL fileURLWithPath:jbroot(@"/var/mobile") isDirectory:YES];
 	preferences = [[NSUserDefaults alloc] _initWithSuiteName:@"org.wuffs.flickplus" container:containerURL];
 	// TODO watch for a thing, probably
