@@ -467,11 +467,43 @@ static void endAnimHackMode(UIKBKeyView *keyView) {
 	animHackMode = AHMNone;
 }
 
+@interface CALayer (FlickPlusPrivate)
+@property(copy) id meshTransform;
+@end
+
+// Apple's keycap meshes are laid out for iPad glyph positions. On iPhone they
+// shear and squash the glyphs (a pressed "h" turns into "ń", the flick
+// preview warps), and no single set of rects suits every key, font and
+// orientation. So while hacking we drop keycap meshes entirely and the flick
+// becomes a plain opacity crossfade between the letter and the symbol.
+static void stripKeyMeshes(UIKBKeyView *keyView, BOOL expected) {
+	NSMutableArray<CALayer *> *pending = [NSMutableArray arrayWithObject:keyView.layer];
+	while (pending.count) {
+		CALayer *layer = pending.lastObject;
+		[pending removeLastObject];
+		if ([layer respondsToSelector:@selector(meshTransform)] && layer.meshTransform) {
+			if (!expected)
+				NSLog(@"[FlickPlus] clearing unexpected mesh on %@ (key %@)", layer, keyView.key.name);
+			layer.meshTransform = nil;
+		}
+		for (NSString *animKey in layer.animationKeys) {
+			CABasicAnimation *anim = (CABasicAnimation *)[layer animationForKey:animKey];
+			if ([anim isKindOfClass:[CABasicAnimation class]] && [anim.keyPath isEqualToString:@"meshTransform"] && (anim.fromValue || anim.toValue))
+				NSLog(@"[FlickPlus] mesh animation '%@' slipped through (key %@)", animKey, keyView.key.name);
+		}
+		if (layer.sublayers)
+			[pending addObjectsFromArray:layer.sublayers];
+	}
+}
+
 %hook UIKBKeyViewAnimator
 - (void)transitionKeyView:(UIKBKeyView *)keyView fromState:(int)from toState:(int)to completion:(void *)c {
 	enterAnimHackMode(keyView);
 	%orig;
 	if (animHackMode != AHMNone) {
+		// this is where the pressed state gets its static keycap meshes
+		stripKeyMeshes(keyView, YES);
+
 		// force the symbol opacity to zero
 		// we can't change a double constant with a simple hook, alas
 		UIKBTree *key = keyView.key;
@@ -486,14 +518,20 @@ static void endAnimHackMode(UIKBKeyView *keyView) {
 - (void)updateTransitionForKeyView:(UIKBKeyView *)keyView normalizedDragSize:(CGSize)size {
 	enterAnimHackMode(keyView);
 	%orig;
+	stripKeyMeshes(keyView, NO);
 	endAnimHackMode(keyView);
 }
 - (void)endTransitionForKeyView:(UIKBKeyView *)keyView {
 	enterAnimHackMode(keyView);
 	%orig;
+	stripKeyMeshes(keyView, NO);
 	endAnimHackMode(keyView);
 }
 + (id)normalizedAnimationWithKeyPath:(NSString *)path fromValue:(id)from toValue:(id)to {
+	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"]) {
+		// keep the animation (UIKit looks it up by key later) but make it a no-op
+		return %orig(path, nil, nil);
+	}
 	// we want to force symbol opacity to 0...
 	if (animHackMode != AHMNone && [path isEqualToString:@"opacity"]) {
 		// awful kludge alert!!
@@ -502,6 +540,16 @@ static void endAnimHackMode(UIKBKeyView *keyView) {
 			return %orig(path, @0, to);
 		}
 	}
+	return %orig;
+}
++ (id)normalizedUnwindAnimationWithKeyPath:(NSString *)path fromValue:(id)from toValue:(id)to offset:(double)offset {
+	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"])
+		return %orig(path, nil, nil, offset);
+	return %orig;
+}
++ (id)normalizedUnwindAnimationWithKeyPath:(NSString *)path originallyFromValue:(id)from toValue:(id)to offset:(double)offset {
+	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"])
+		return %orig(path, nil, nil, offset);
 	return %orig;
 }
 + (id)normalizedUnwindOpacityAnimationWithKeyPath:(NSString *)path originallyFromValue:(id)from toValue:(id)to offset:(double)offset {
@@ -515,30 +563,6 @@ static void endAnimHackMode(UIKBKeyView *keyView) {
 	}
 	return %orig;
 }
-
-- (id)keycapPrimaryTransform {
-	// don't relocate the primary keycap, at all
-	if (animHackMode == AHMNone)
-		return %orig;
-	else
-		return self.keycapNullTransform;
-}
-
-- (id)keycapAlternateTransform:(UIKBKeyView *)keyView {
-	// move the symbol out of view at the top
-	// not ideal, but it's less glitchy-looking than the default...
-	if (animHackMode == AHMNone)
-		return %orig;
-	else {
-		return [self keycapMeshTransformFromRect:CGRectMake(0.115, 0.28, 0.77, 0.44)
-		                                  toRect:CGRectMake(0.5, 0, 0, 0)];
-	}
-	// eventually, it would be good to render paddle-less mode to match
-	// the non-pressed keys, but that requires more work to determine the
-	// correct rects for all configurations
-}
-
-// TODO: do similar stopgap animations for the left/right bits
 %end
 
 
