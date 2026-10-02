@@ -13,31 +13,15 @@
 #include "h/UIKBKeyView.h"
 #include "h/UIKBKeyViewAnimator.h"
 #include <dlfcn.h>
-#include <version.h>
 
 #include "Utils.h"
-#include <roothide.h>
-
-#ifndef FP_NO_CEPHEI
 #include <Cephei/HBPreferences.h>
-#endif
 
-#ifndef kCFCoreFoundationVersionNumber_iOS_13_0
-#define kCFCoreFoundationVersionNumber_iOS_13_0 1665.15
-#endif
-
-#ifndef FP_NO_CEPHEI
 static HBPreferences *preferences;
-#else
-@interface NSUserDefaults (Private)
-- (instancetype)_initWithSuiteName:(NSString *)suiteName container:(NSURL *)container;
-@end
-static NSUserDefaults *preferences;
-#endif
 static NSMutableDictionary *kbPropCache;
 static NSString *lightSymbolsColour, *darkSymbolsColour;
 static bool hapticFeedbackEnabled = YES;
-static double symbolFontScale = 1.0;
+static const double symbolFontScale = 0.7;
 static NSInteger flickRadius = 35;
 
 static id kbFetchProp(NSString *key) {
@@ -74,7 +58,6 @@ static UISelectionFeedbackGenerator *clickFeedback = nil;
 	double deltaY = now.y - initial.y;
 	double distanceSq = (deltaX * deltaX) + (deltaY * deltaY);
 
-	//NSLog(@"delta:%f,%f distanceSq:%f %s", deltaX, deltaY, distanceSq, passedThreshold ? "SWIPE" : "FLICK");
 	double sqSnap = flickRadius * flickRadius * 6.25;
 	bool passedThreshold = deltaX < -1 * flickRadius || deltaX > flickRadius || distanceSq > sqSnap;
 	if (passedThreshold)
@@ -192,7 +175,6 @@ static UISelectionFeedbackGenerator *clickFeedback = nil;
 			result[cleanName] = bottomKeys[i];
 	}
 
-	// NSLog(@"Built:: %@", result);
 	return [NSDictionary dictionaryWithDictionary:result];
 }
 @end
@@ -206,17 +188,8 @@ id UIKeyboardLocalizedObject(NSString *key, NSString *language, NSString *unk, i
 };
 
 @interface NSLocale (MissingStuff)
-+ (NSLocale *)preferredLocale; // iOS 13+
-+ (NSLocale *)_UIKBPreferredLocale; // iOS 12
++ (NSLocale *)preferredLocale;
 @end
-
-%group Polyfill12
-%hook NSLocale
-%new + (NSLocale *)preferredLocale {
-	return [NSLocale _UIKBPreferredLocale];
-}
-%end
-%end
 
 static NSString *currencyFix(NSString *str) {
 	// based heavily off the logic in -[UIKeyboardLayoutStar setCurrencyKeysForCurrentLocaleOnKeyplane:]
@@ -259,7 +232,6 @@ static NSString *currencyFix(NSString *str) {
 - (void)updateFlickKeycapOnKeys {
 	// it's Keyboard Fun Time!
 	// we are in a keyplane, we need to know what keyboard we are
-	NSLog(@"I'm being patched...! %@ -> %@", self.name, [self stringForProperty:@"fp-kb-name"]);
 
 	// two cases:
 	//    altflag is capsAreSeparate
@@ -311,13 +283,11 @@ static NSString *currencyFix(NSString *str) {
 
 					NSArray *cfgKey = config[checkName];
 					if (cfgKey == nil) {
-						// NSLog(@"map for %@ not found", checkName);
 						if (key.displayTypeHint == 10) {
 							// clear existing gesture keys just in case
 							key.displayTypeHint = 0;
 						}
 					} else if (cfgKey.count == 2) {
-						// NSLog(@"map for %@ found -> %@", checkName, cfgKey);
 						// text key
 						key.displayTypeHint = 10;
 						NSString *rep = cfgKey[0], *disp = cfgKey[1];
@@ -353,7 +323,6 @@ static NSString *currencyFix(NSString *str) {
 
 - (UIKBTree *)keyboardForName:(NSString *)name {
 	// TODO: do not patch the same keyboard multiple times!
-	NSLog(@"Requesting deserialisation of keyboard %@", name);
 	UIKBTree *tree = %orig;
 
 	NSString *cleanName = name;
@@ -454,18 +423,9 @@ static NSString *currencyFix(NSString *str) {
 %end
 
 // make animations less of a disaster
-enum AnimHackMode { AHMNone, AHMPaddles, AHMNoPaddles };
-static AnimHackMode animHackMode = AHMNone;
-
-static void enterAnimHackMode(UIKBKeyView *keyView) {
-	// TODO: might want to check the keyboard's interface idiom
-	// in case people decide to run this on an iPad
-	animHackMode = keyView.factory.allowsPaddles ? AHMPaddles : AHMNoPaddles;
-}
-
-static void endAnimHackMode(UIKBKeyView *keyView) {
-	animHackMode = AHMNone;
-}
+// TODO: might want to check the keyboard's interface idiom
+// in case people decide to run this on an iPad
+static bool inAnimHack = false;
 
 @interface CALayer (FlickPlusPrivate)
 @property(copy) id meshTransform;
@@ -476,21 +436,13 @@ static void endAnimHackMode(UIKBKeyView *keyView) {
 // preview warps), and no single set of rects suits every key, font and
 // orientation. So while hacking we drop keycap meshes entirely and the flick
 // becomes a plain opacity crossfade between the letter and the symbol.
-static void stripKeyMeshes(UIKBKeyView *keyView, BOOL expected) {
+static void stripKeyMeshes(UIKBKeyView *keyView) {
 	NSMutableArray<CALayer *> *pending = [NSMutableArray arrayWithObject:keyView.layer];
 	while (pending.count) {
 		CALayer *layer = pending.lastObject;
 		[pending removeLastObject];
-		if ([layer respondsToSelector:@selector(meshTransform)] && layer.meshTransform) {
-			if (!expected)
-				NSLog(@"[FlickPlus] clearing unexpected mesh on %@ (key %@)", layer, keyView.key.name);
+		if ([layer respondsToSelector:@selector(meshTransform)])
 			layer.meshTransform = nil;
-		}
-		for (NSString *animKey in layer.animationKeys) {
-			CABasicAnimation *anim = (CABasicAnimation *)[layer animationForKey:animKey];
-			if ([anim isKindOfClass:[CABasicAnimation class]] && [anim.keyPath isEqualToString:@"meshTransform"] && (anim.fromValue || anim.toValue))
-				NSLog(@"[FlickPlus] mesh animation '%@' slipped through (key %@)", animKey, keyView.key.name);
-		}
 		if (layer.sublayers)
 			[pending addObjectsFromArray:layer.sublayers];
 	}
@@ -498,42 +450,40 @@ static void stripKeyMeshes(UIKBKeyView *keyView, BOOL expected) {
 
 %hook UIKBKeyViewAnimator
 - (void)transitionKeyView:(UIKBKeyView *)keyView fromState:(int)from toState:(int)to completion:(void *)c {
-	enterAnimHackMode(keyView);
+	inAnimHack = true;
 	%orig;
-	if (animHackMode != AHMNone) {
-		// this is where the pressed state gets its static keycap meshes
-		stripKeyMeshes(keyView, YES);
+	// this is where the pressed state gets its static keycap meshes
+	stripKeyMeshes(keyView);
 
-		// force the symbol opacity to zero
-		// we can't change a double constant with a simple hook, alas
-		UIKBTree *key = keyView.key;
-		if (to == 4 && key.displayType != 7 && key.displayTypeHint == 10) {
-			CALayer *symbolLayer = [keyView layerForRenderFlags:16];
-			if (symbolLayer)
-				symbolLayer.opacity = 0;
-		}
+	// force the symbol opacity to zero
+	// we can't change a double constant with a simple hook, alas
+	UIKBTree *key = keyView.key;
+	if (to == 4 && key.displayType != 7 && key.displayTypeHint == 10) {
+		CALayer *symbolLayer = [keyView layerForRenderFlags:16];
+		if (symbolLayer)
+			symbolLayer.opacity = 0;
 	}
-	endAnimHackMode(keyView);
+	inAnimHack = false;
 }
 - (void)updateTransitionForKeyView:(UIKBKeyView *)keyView normalizedDragSize:(CGSize)size {
-	enterAnimHackMode(keyView);
+	inAnimHack = true;
 	%orig;
-	stripKeyMeshes(keyView, NO);
-	endAnimHackMode(keyView);
+	stripKeyMeshes(keyView);
+	inAnimHack = false;
 }
 - (void)endTransitionForKeyView:(UIKBKeyView *)keyView {
-	enterAnimHackMode(keyView);
+	inAnimHack = true;
 	%orig;
-	stripKeyMeshes(keyView, NO);
-	endAnimHackMode(keyView);
+	stripKeyMeshes(keyView);
+	inAnimHack = false;
 }
 + (id)normalizedAnimationWithKeyPath:(NSString *)path fromValue:(id)from toValue:(id)to {
-	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"]) {
+	if (inAnimHack && [path isEqualToString:@"meshTransform"]) {
 		// keep the animation (UIKit looks it up by key later) but make it a no-op
 		return %orig(path, nil, nil);
 	}
 	// we want to force symbol opacity to 0...
-	if (animHackMode != AHMNone && [path isEqualToString:@"opacity"]) {
+	if (inAnimHack && [path isEqualToString:@"opacity"]) {
 		// awful kludge alert!!
 		double v = [from doubleValue];
 		if (v >= 0.2 && v <= 0.35) {
@@ -543,18 +493,18 @@ static void stripKeyMeshes(UIKBKeyView *keyView, BOOL expected) {
 	return %orig;
 }
 + (id)normalizedUnwindAnimationWithKeyPath:(NSString *)path fromValue:(id)from toValue:(id)to offset:(double)offset {
-	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"])
+	if (inAnimHack && [path isEqualToString:@"meshTransform"])
 		return %orig(path, nil, nil, offset);
 	return %orig;
 }
 + (id)normalizedUnwindAnimationWithKeyPath:(NSString *)path originallyFromValue:(id)from toValue:(id)to offset:(double)offset {
-	if (animHackMode != AHMNone && [path isEqualToString:@"meshTransform"])
+	if (inAnimHack && [path isEqualToString:@"meshTransform"])
 		return %orig(path, nil, nil, offset);
 	return %orig;
 }
 + (id)normalizedUnwindOpacityAnimationWithKeyPath:(NSString *)path originallyFromValue:(id)from toValue:(id)to offset:(double)offset {
 	// it's a great day in UIKit, and you are a horrible goose
-	if (animHackMode != AHMNone && [path isEqualToString:@"opacity"]) {
+	if (inAnimHack && [path isEqualToString:@"opacity"]) {
 		// awful kludge alert!! (part 2)
 		double v = [from doubleValue];
 		if (v >= 0.2 && v <= 0.35) {
@@ -598,7 +548,6 @@ static void syncPreferences() {
 	lightSymbolsColour = resolveColour([preferences objectForKey:@"lightSymbols"]);
 	darkSymbolsColour = resolveColour([preferences objectForKey:@"darkSymbols"]);
 	hapticFeedbackEnabled = [preferences boolForKey:@"hapticFeedback"];
-	symbolFontScale = 0.7;
     flickRadius = resolveFlickRadius([preferences objectForKey:@"flickRadius"]);
 	[kbPropCache removeAllObjects];
 	[[%c(UIKeyboardCache) sharedInstance] purge];
@@ -609,7 +558,6 @@ static void syncPreferences() {
 %ctor {
 	kbPropCache = [NSMutableDictionary dictionary];
 
- #ifndef FP_NO_CEPHEI
 	preferences = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
 	[preferences registerDefaults:@{
 		@"lightSymbols": @"lgrey",
@@ -619,12 +567,6 @@ static void syncPreferences() {
 	[preferences registerPreferenceChangeBlock:^{
 		syncPreferences();
 	}];
- #else
-	NSURL *containerURL = [NSURL fileURLWithPath:jbroot(@"/var/mobile") isDirectory:YES];
-	preferences = [[NSUserDefaults alloc] _initWithSuiteName:@"org.wuffs.flickplus" container:containerURL];
-	// TODO watch for a thing, probably
-	syncPreferences();
-#endif
 
 	// trick thanks to poomsmart
 	// https://github.com/PoomSmart/EmojiPort-Legacy/blob/8573de11226ac2e1c4108c044078109dbfb07a02/KBResizeLegacy.xm
@@ -635,8 +577,5 @@ static void syncPreferences() {
 		%init(SpringBoard);
 	}
 
-	if (!IS_IOS_OR_NEWER(iOS_13_0)) {
-		%init(Polyfill12);
-	}
 	%init;
 }

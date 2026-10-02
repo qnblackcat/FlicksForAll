@@ -61,19 +61,6 @@
 
         {
             cell = PSGroupCell;
-            label = "Sizing";
-        },
-        {
-            cell = PSSwitchCell;
-            label = "Smaller Symbols";
-            default = 0;
-            defaults = "org.wuffs.flickplus";
-            key = smallSymbols;
-            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
-        },
-
-        {
-            cell = PSGroupCell;
             label = "Haptics";
             footerText = "With this switch on, you will feel a click through the Taptic Engine once you've swiped down enough to activate the shortcut.";
         },
