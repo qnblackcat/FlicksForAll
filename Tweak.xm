@@ -22,7 +22,7 @@ static NSMutableDictionary *kbPropCache;
 static NSString *lightSymbolsColour, *darkSymbolsColour;
 static bool hapticFeedbackEnabled = YES;
 static const double symbolFontScale = 0.7;
-static NSInteger flickRadius = 35;
+static double flickBias = 1.0;
 
 static id kbFetchProp(NSString *key) {
 	id value = kbPropCache[key];
@@ -41,27 +41,60 @@ static UISelectionFeedbackGenerator *clickFeedback = nil;
 
 %hook UIKeyboardTouchInfo
 %property (nonatomic, assign) bool fpAllow;
+%property (nonatomic, retain) UIKBTree *fpFlickKey;
 - (id)init {
 	self.fpAllow = false;
 	return %orig;
 }
 %end
 
+// Flicks only ever go downwards, so instead of a single radius we check where
+// the finger has gone relative to the size of the key it landed on.
+// delta is measured from the touch-down point; positive y is downwards.
+static bool movementRulesOutFlick(UIKBTree *key, CGPoint delta) {
+	CGSize size = key.frame.size;
+	double keyWidth = MIN(MAX(size.width, 20.0), 80.0);
+	double keyHeight = MIN(MAX(size.height, 30.0), 60.0);
+	double sideways = fabs(delta.x), down = delta.y;
+
+	// moving up can never be a flick
+	if (down < -0.35 * keyHeight * flickBias)
+		return true;
+
+	// a flick doesn't travel much further than a row
+	if (down > 1.75 * keyHeight * flickBias)
+		return true;
+
+	// flicks stay within a cone below the key (~40 degrees either side);
+	// dual keys get a wider one as they're flicked down-left or down-right
+	double coneSlope = ([key.secondaryRepresentedStrings count] > 1) ? 1.73 : 0.84;
+	if (sideways > 0.5 * keyWidth * flickBias && sideways > coneSlope * flickBias * MAX(down, 0.0))
+		return true;
+
+	return false;
+}
+
 %hook UIKeyboardLayoutStar
 - (void)touchDragged:(UIKBTouchState *)state executionContext:(UIKeyboardTaskExecutionContext *)ctx {
-	UIKeyboardTouchInfo *touchInfo = [self infoForTouch:state]; // UIKeyboardTouchInfo *
+	UIKeyboardTouchInfo *touchInfo = [self infoForTouch:state];
 
 	// are we gonna let this one become a continuous path?
-	CGPoint initial = touchInfo.initialPoint;
-	CGPoint now = touchInfo.initialDragPoint; // TODO check if this is correct
-	double deltaX = now.x - initial.x;
-	double deltaY = now.y - initial.y;
-	double distanceSq = (deltaX * deltaX) + (deltaY * deltaY);
+	// once we've said yes, it stays that way for the rest of the touch
+	if (!touchInfo.fpAllow && touchInfo.fpFlickKey == nil) {
+		// only a touch that lands on a flick key can turn into a flick
+		UIKBTree *key = touchInfo.key;
+		if (key.displayTypeHint == 10)
+			touchInfo.fpFlickKey = key;
+		else
+			touchInfo.fpAllow = true;
+	}
 
-	double sqSnap = flickRadius * flickRadius * 6.25;
-	bool passedThreshold = deltaX < -1 * flickRadius || deltaX > flickRadius || distanceSq > sqSnap;
-	if (passedThreshold)
-		touchInfo.fpAllow = true;
+	if (!touchInfo.fpAllow) {
+		CGPoint initial = touchInfo.initialPoint;
+		CGPoint now = [state respondsToSelector:@selector(locationInView:)] ? [state locationInView:self] : touchInfo.initialDragPoint;
+		if (movementRulesOutFlick(touchInfo.fpFlickKey, CGPointMake(now.x - initial.x, now.y - initial.y)))
+			touchInfo.fpAllow = true;
+	}
 
 	if (touchInfo.fpAllow) {
 		// this lets a continuous path happen
@@ -532,23 +565,23 @@ static NSString *resolveColour(NSString *name) {
 	}
 }
 
-static NSInteger resolveFlickRadius(NSString * name) {
-    if ([name isEqualToString:@"short"]) {
-        return 25;
-    } else if ([name isEqualToString:@"moderate"]) {
-        return 35;
-    } else if ([name isEqualToString:@"wide"]) {
-        return 55;
-    } else {
-        return 35;
-    }
+// stored under the old "flickRadius" key, but it now scales every threshold
+// in movementRulesOutFlick (lower = more eager to start a swipe)
+static double resolveFlickBias(NSString *name) {
+	if ([name isEqualToString:@"short"]) {
+		return 0.7;
+	} else if ([name isEqualToString:@"wide"]) {
+		return 1.6;
+	} else {
+		return 1.0;
+	}
 }
 
 static void syncPreferences() {
 	lightSymbolsColour = resolveColour([preferences objectForKey:@"lightSymbols"]);
 	darkSymbolsColour = resolveColour([preferences objectForKey:@"darkSymbols"]);
 	hapticFeedbackEnabled = [preferences boolForKey:@"hapticFeedback"];
-    flickRadius = resolveFlickRadius([preferences objectForKey:@"flickRadius"]);
+	flickBias = resolveFlickBias([preferences objectForKey:@"flickRadius"]);
 	[kbPropCache removeAllObjects];
 	[[%c(UIKeyboardCache) sharedInstance] purge];
 	// maybe also [UIKBRenderer clearInternalCaches] ??

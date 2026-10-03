@@ -32,6 +32,8 @@
 - (id)representedString;
 - (int)displayType;
 - (int)displayTypeHint;
+- (CGRect)frame;
+- (id)secondaryRepresentedStrings;
 - (long long)selectedVariantIndex;
 - (void)setDisplayTypeHint:(int)arg1;
 - (void)setGestureKey:(id)arg1;

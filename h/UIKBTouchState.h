@@ -5,4 +5,6 @@
 @interface UIKBTouchState : NSObject <NSCopying> {
 }
 
+- (CGPoint)locationInView:(UIView *)view;
+
 @end
