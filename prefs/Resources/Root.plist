@@ -142,17 +142,20 @@
             footerText = "This tweak is free and open-source. If you like it, feel free to throw some money at me (no pressure though!)";
         },
         {
-            cellClass = HBLinkTableCell;
+            cell = PSButtonCell;
+            action = "openURL:";
             label = "PayPal.me";
             url = "https://paypal.me/trashcurl";
         },
         {
-            cellClass = HBLinkTableCell;
+            cell = PSButtonCell;
+            action = "openURL:";
             label = "Ko-fi";
             url = "https://ko-fi.com/ninji_";
         },
         {
-            cellClass = HBLinkTableCell;
+            cell = PSButtonCell;
+            action = "openURL:";
             label = "Monzo (UK only)";
             url = "https://monzo.me/ninji";
         },
@@ -164,9 +167,10 @@
             footerText = "You'll probably regret following me, but it's there if you really want to.";
         },
         {
-            cellClass = HBTwitterCell;
-            user = "_Ninji";
-            label = "Ninji";
+            cell = PSButtonCell;
+            action = "openURL:";
+            label = "@_Ninji";
+            url = "https://x.com/_Ninji";
         },
 
 
@@ -175,12 +179,14 @@
             label = "Source Code";
         },
         {
-            cellClass = HBLinkTableCell;
+            cell = PSButtonCell;
+            action = "openURL:";
             label = "GitHub: qnblackcat/FlicksForAll";
             url = "https://github.com/qnblackcat/FlicksForAll";
         },
         {
-            cellClass = HBLinkTableCell;
+            cell = PSButtonCell;
+            action = "openURL:";
             label = "GitHub: Treeki/FlicksForAll";
             url = "https://github.com/Treeki/FlicksForAll";
         }

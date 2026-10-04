@@ -2,7 +2,7 @@
 
 iPad-style key flicks on the iPhone keyboard. Flick down on a key to type the symbol shown at its top, and tap it as usual to type the letter. Swipe-typing still works.
 
-**Requires:** iOS 15 or later (rootless & roothide) and [Cephei](https://github.com/hbang/libcephei).
+**Requires:** iOS 15 or later (rootless & roothide).
 
 ## Install
 

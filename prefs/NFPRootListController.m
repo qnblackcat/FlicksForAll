@@ -2,9 +2,6 @@
 #import "NFPKeyboardController.h"
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSTableCell.h>
-#import <Cephei/HBRespringController.h>
-#import <Cephei/HBPreferences.h>
-#import <CepheiPrefs/HBLinkTableCell.h>
 #import "../h/UIKeyboardInputMode.h"
 #import "../h/UIKeyboardInputModeController.h"
 #import "../h/UIKeyboardCache.h"
@@ -12,24 +9,13 @@
 #include <objc/runtime.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
-@interface HBRespringController (TerribleHack)
-+ (NSURL *)_preferencesReturnURL;
-@end
-
 @implementation NFPRootListController
-
-// + (NSString *)hb_specifierPlist {
-// 	return @"Root";
-// }
-
-// all of this can be removed once libpackageinfo is updated
-// so Cephei works properly again
 
 // settings used to go through cfprefsd, carry them over to NFPPrefs once
 + (void)migrateOldPreferences {
 	if ([[NSFileManager defaultManager] fileExistsAtPath:[NFPPrefs path]])
 		return;
-	NSDictionary *old = [[[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"] dictionaryRepresentation];
+	NSDictionary *old = CFBridgingRelease(CFPreferencesCopyMultiple(NULL, CFSTR("org.wuffs.flickplus"), kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
 	if (old.count > 0)
 		[NFPPrefs replaceAll:old];
 }
@@ -39,15 +25,6 @@
 		[NFPRootListController migrateOldPreferences];
 
 		NSMutableArray *specs = [[self loadSpecifiersFromPlistName:@"Root" target:self] mutableCopy];
-
-		// cephei does this for us once we use its listcontroller
-		for (PSSpecifier *specifier in specs) {
-			Class cellClass = specifier.properties[PSCellClassKey];
-			if ([cellClass isSubclassOfClass:HBLinkTableCell.class]) {
-				specifier.cellType = PSLinkCell;
-				specifier.buttonAction = @selector(hb_openURL:);
-			}
-		}
 
 		NSArray *inputModeIDs = [[UIKeyboardInputModeController sharedInputModeController] activeInputModeIdentifiers];
 		NSSet *layouts = [[objc_getClass("UIKeyboardCache") sharedInstance] uniqueLayoutsFromInputModes:inputModeIDs];
@@ -173,7 +150,7 @@
 }
 
 
-- (void)hb_openURL:(PSSpecifier *)specifier {
+- (void)openURL:(PSSpecifier *)specifier {
 	NSURL *url = [NSURL URLWithString:specifier.properties[@"url"]];
 	[[UIApplication sharedApplication] openURL:url];
 }
