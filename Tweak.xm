@@ -479,6 +479,8 @@ static NSString *currencyFix(NSString *str) {
 			style.textColor = which;
 			style.textOpacity = 1.0;
 			style.fontSize *= symbolFontScale;
+			// the renderer draws nothing if fontSize ends up below minFontSize
+			style.minFontSize = MIN(style.minFontSize, style.fontSize);
 		}
 
 		// force the blurred background to be applied to light KB
