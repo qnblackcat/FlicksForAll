@@ -2,6 +2,6 @@
 #import <Preferences/PSListController.h>
 
 // @interface NFPRootListController : HBRootListController
-@interface NFPRootListController : PSListController
+@interface NFPRootListController : PSListController <UIDocumentPickerDelegate>
 
 @end

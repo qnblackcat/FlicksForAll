@@ -8,27 +8,72 @@
         {
             cell = PSEditTextCell;
         },
+
         {
             cell = PSGroupCell;
-            label = "Active Layouts";
-        },
-        {
-            cell = PSGroupCell;
-            label = "Bias";
-            footerText = "Bias gesture recognition toward swipes or flicks.";
+            label = "Flick Sensitivity";
+            footerText = "How easily a downward gesture on a key counts as a flick. Higher sensitivity lets your finger wander more before it switches to swipe-typing. If you swipe-type a lot, pick a lower setting.";
         },
         {
             cell = PSSegmentCell;
-            label = "Bias";
             default = "moderate";
             defaults = "org.wuffs.flickplus";
             key = flickRadius;
-            validValues = ("short", "moderate", "wide");
-            validTitles = ("Swipes", "No Bias", "Flicks");
-            shortTitles = ("Swipes", "No Bias", "Flicks");
-            detail = PSListItemsController;
+            validValues = ("vshort", "short", "moderate", "long", "wide");
+            validTitles = ("Very Low", "Low", "Normal", "High", "Very High");
+            shortTitles = ("Very Low", "Low", "Normal", "High", "Very High");
             PostNotification = "org.wuffs.flickplus/ReloadPrefs";
         },
+
+        {
+            cell = PSGroupCell;
+            label = "Haptic Feedback";
+            footerText = "Plays a tick each time your finger slides onto a symbol while flicking. Feedback on Cancel buzzes if a flick you started turns into swipe-typing. Changes take effect immediately.";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Feedback on Slide";
+            default = 1;
+            defaults = "org.wuffs.flickplus";
+            key = hapticFeedback;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSegmentCell;
+            id = hapticStrength;
+            default = "selection";
+            defaults = "org.wuffs.flickplus";
+            key = hapticStrength;
+            validValues = ("selection", "soft", "light", "medium", "heavy");
+            validTitles = ("Extra Light", "Soft", "Light", "Medium", "Strong");
+            shortTitles = ("Extra Light", "Soft", "Light", "Medium", "Strong");
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Feedback on Cancel";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = hapticCancelFeedback;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+
+        {
+            cell = PSGroupCell;
+            label = "Symbol Size";
+            footerText = "Sets the size of the symbols that appear on the top of the keys.";
+        },
+        {
+            cell = PSSegmentCell;
+            default = "medium";
+            defaults = "org.wuffs.flickplus";
+            key = symbolSize;
+            validValues = ("small", "medium", "large");
+            validTitles = ("Small", "Medium", "Large");
+            shortTitles = ("Small", "Medium", "Large");
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+
         {
             cell = PSGroupCell;
             label = "Symbol Colours";
@@ -61,22 +106,24 @@
 
         {
             cell = PSGroupCell;
-            label = "Haptics";
-            footerText = "With this switch on, you will feel a click through the Taptic Engine once you've swiped down enough to activate the shortcut.";
-        },
-        {
-            cell = PSSwitchCell;
-            label = "Feedback on Slide";
-            default = 1;
-            defaults = "org.wuffs.flickplus";
-            key = hapticFeedback;
-            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+            id = activeLayouts;
+            label = "Active Layouts";
         },
 
         {
             cell = PSGroupCell;
             label = "Tools";
-            footerText = "Use only in case of emergency.";
+            footerText = "Export saves all of your settings, custom flick symbols included, to a file you can back up or share. Import replaces your current settings with one of those files. Reset Settings clears everything, so use it only in case of emergency.";
+        },
+        {
+            cell = PSButtonCell;
+            label = "Export Preset";
+            action = "exportPresetTapped:";
+        },
+        {
+            cell = PSButtonCell;
+            label = "Import Preset";
+            action = "importPresetTapped:";
         },
         {
             cell = PSButtonCell;
@@ -126,6 +173,11 @@
         {
             cell = PSGroupCell;
             label = "Source Code";
+        },
+        {
+            cellClass = HBLinkTableCell;
+            label = "GitHub: qnblackcat/FlicksForAll";
+            url = "https://github.com/qnblackcat/FlicksForAll";
         },
         {
             cellClass = HBLinkTableCell;

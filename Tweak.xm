@@ -21,7 +21,10 @@ static HBPreferences *preferences;
 static NSMutableDictionary *kbPropCache;
 static NSString *lightSymbolsColour, *darkSymbolsColour;
 static bool hapticFeedbackEnabled = YES;
-static const double symbolFontScale = 0.7;
+// -1 means UISelectionFeedbackGenerator, anything else is a UIImpactFeedbackStyle
+static NSInteger hapticStyle = -1;
+static bool hapticCancelEnabled = NO;
+static double symbolFontScale = 0.7;
 static double flickBias = 1.0;
 
 static id kbFetchProp(NSString *key) {
@@ -37,7 +40,23 @@ static id kbFetchProp(NSString *key) {
 
 static bool lieAboutGestureKeys = false;
 static bool doingDragOnKey = false;
-static UISelectionFeedbackGenerator *clickFeedback = nil;
+static UIFeedbackGenerator *clickFeedback = nil;
+static UINotificationFeedbackGenerator *cancelFeedback = nil;
+// true while a flick symbol is selected, so we know there's a flick to cancel
+static bool flickArmed = false;
+
+static UIFeedbackGenerator *makeClickFeedback() {
+	if (hapticStyle < 0)
+		return [UISelectionFeedbackGenerator new];
+	return [[UIImpactFeedbackGenerator alloc] initWithStyle:(UIImpactFeedbackStyle)hapticStyle];
+}
+
+static void playClickFeedback() {
+	if ([clickFeedback isKindOfClass:[UIImpactFeedbackGenerator class]])
+		[(UIImpactFeedbackGenerator *)clickFeedback impactOccurred];
+	else
+		[(UISelectionFeedbackGenerator *)clickFeedback selectionChanged];
+}
 
 %hook UIKeyboardTouchInfo
 %property (nonatomic, assign) bool fpAllow;
@@ -98,10 +117,15 @@ static bool movementRulesOutFlick(UIKBTree *key, CGPoint delta) {
 
 	if (touchInfo.fpAllow) {
 		// this lets a continuous path happen
-		if (clickFeedback != nil) {
-			// cancel any pending haptic generator
-			clickFeedback = nil;
+		if (flickArmed && cancelFeedback != nil) {
+			// a flick symbol was selected, signal that the flick is now off-limits
+			[cancelFeedback notificationOccurred:UINotificationFeedbackTypeWarning];
 		}
+		flickArmed = false;
+
+		// cancel any pending haptic generators
+		clickFeedback = nil;
+		cancelFeedback = nil;
 
 		lieAboutGestureKeys = true;
 		%orig;
@@ -113,9 +137,13 @@ static bool movementRulesOutFlick(UIKBTree *key, CGPoint delta) {
 
 -(void)updatePanAlternativesForTouchInfo:(UIKeyboardTouchInfo *)touchInfo {
 	if (clickFeedback == nil && hapticFeedbackEnabled) {
-		// Extra-light feedback while sliding through variants
-		clickFeedback = [UISelectionFeedbackGenerator new];
+		// feedback while sliding through variants, at the chosen strength
+		clickFeedback = makeClickFeedback();
 		[clickFeedback prepare];
+	}
+	if (cancelFeedback == nil && hapticCancelEnabled) {
+		cancelFeedback = [UINotificationFeedbackGenerator new];
+		[cancelFeedback prepare];
 	}
 
 	doingDragOnKey = true;
@@ -124,18 +152,21 @@ static bool movementRulesOutFlick(UIKBTree *key, CGPoint delta) {
 }
 
 - (void)resetPanAlternativesForEndedTouch:(id)touch {
-	if (clickFeedback != nil) {
-		clickFeedback = nil;
-	}
+	clickFeedback = nil;
+	cancelFeedback = nil;
+	flickArmed = false;
 }
 %end
 
 %hook UIKBTree
 - (void)setSelectedVariantIndex:(long long)index {
-	if (doingDragOnKey && clickFeedback != nil) {
-		if (self.selectedVariantIndex != index) {
-			// Extra-light tick while sliding through variants
-			[clickFeedback selectionChanged];
+	if (doingDragOnKey && self.selectedVariantIndex != index) {
+		// 0 and 1 are the flick symbols, anything else means none is selected
+		flickArmed = (index == 0 || index == 1);
+
+		if (clickFeedback != nil) {
+			// tick while sliding through variants
+			playClickFeedback();
 			[clickFeedback prepare];
 		}
 	}
@@ -565,11 +596,16 @@ static NSString *resolveColour(NSString *name) {
 	}
 }
 
-// stored under the old "flickRadius" key, but it now scales every threshold
-// in movementRulesOutFlick (lower = more eager to start a swipe)
+// "Flick Sensitivity" in the prefs, still stored under the old "flickRadius"
+// key so existing choices carry over. it scales every threshold in
+// movementRulesOutFlick (lower = more eager to start a swipe)
 static double resolveFlickBias(NSString *name) {
-	if ([name isEqualToString:@"short"]) {
+	if ([name isEqualToString:@"vshort"]) {
+		return 0.55;
+	} else if ([name isEqualToString:@"short"]) {
 		return 0.7;
+	} else if ([name isEqualToString:@"long"]) {
+		return 1.3;
 	} else if ([name isEqualToString:@"wide"]) {
 		return 1.6;
 	} else {
@@ -577,10 +613,37 @@ static double resolveFlickBias(NSString *name) {
 	}
 }
 
+static double resolveSymbolScale(NSString *name) {
+	if ([name isEqualToString:@"small"]) {
+		return 0.55;
+	} else if ([name isEqualToString:@"large"]) {
+		return 0.85;
+	} else {
+		return 0.7;
+	}
+}
+
+static NSInteger resolveHapticStyle(NSString *name) {
+	if ([name isEqualToString:@"soft"]) {
+		return UIImpactFeedbackStyleSoft;
+	} else if ([name isEqualToString:@"light"]) {
+		return UIImpactFeedbackStyleLight;
+	} else if ([name isEqualToString:@"medium"]) {
+		return UIImpactFeedbackStyleMedium;
+	} else if ([name isEqualToString:@"heavy"]) {
+		return UIImpactFeedbackStyleHeavy;
+	} else {
+		return -1;
+	}
+}
+
 static void syncPreferences() {
 	lightSymbolsColour = resolveColour([preferences objectForKey:@"lightSymbols"]);
 	darkSymbolsColour = resolveColour([preferences objectForKey:@"darkSymbols"]);
 	hapticFeedbackEnabled = [preferences boolForKey:@"hapticFeedback"];
+	hapticStyle = resolveHapticStyle([preferences objectForKey:@"hapticStrength"]);
+	hapticCancelEnabled = [preferences boolForKey:@"hapticCancelFeedback"];
+	symbolFontScale = resolveSymbolScale([preferences objectForKey:@"symbolSize"]);
 	flickBias = resolveFlickBias([preferences objectForKey:@"flickRadius"]);
 	[kbPropCache removeAllObjects];
 	[[%c(UIKeyboardCache) sharedInstance] purge];
@@ -595,7 +658,10 @@ static void syncPreferences() {
 	[preferences registerDefaults:@{
 		@"lightSymbols": @"lgrey",
 		@"darkSymbols": @"lgrey",
-		@"hapticFeedback": @YES
+		@"hapticFeedback": @YES,
+		@"hapticStrength": @"selection",
+		@"hapticCancelFeedback": @NO,
+		@"symbolSize": @"medium"
 	}];
 	[preferences registerPreferenceChangeBlock:^{
 		syncPreferences();

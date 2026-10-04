@@ -8,7 +8,7 @@ ARCHS = arm64 arm64e
 
 FlickPlusPrefs_FILES = NFPRootListController.m NFPKeyboardController.m NFPKeyplaneController.m NFPKeyPropsController.m
 FlickPlusPrefs_INSTALL_PATH = /Library/PreferenceBundles
-FlickPlusPrefs_FRAMEWORKS = UIKit
+FlickPlusPrefs_FRAMEWORKS = UIKit UniformTypeIdentifiers
 FlickPlusPrefs_EXTRA_FRAMEWORKS += Cephei CepheiPrefs
 FlickPlusPrefs_PRIVATE_FRAMEWORKS = Preferences
 FlickPlusPrefs_CFLAGS = -fobjc-arc -Wno-c++11-extensions -Wno-unguarded-availability-new -Wno-deprecated-declarations
