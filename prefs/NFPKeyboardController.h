@@ -1,10 +1,10 @@
 // #import <CepheiPrefs/HBRootListController.h>
-#import <Preferences/PSListController.h>
+#import "NFPListController.h"
 #import "../h/UIKeyboardInputMode.h"
 #import "../h/UIKBTree.h"
 #import "../h/TUIKeyboardLayoutFactory.h"
 
-@interface NFPKeyboardController : PSListController
+@interface NFPKeyboardController : NFPListController
 {
 	UIKBTree *_keyboard;
 

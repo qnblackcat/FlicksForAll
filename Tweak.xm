@@ -15,9 +15,10 @@
 #include <dlfcn.h>
 
 #include "Utils.h"
-#include <Cephei/HBPreferences.h>
+#include "NFPPrefs.h"
+#include <notify.h>
 
-static HBPreferences *preferences;
+static NSDictionary *preferences, *preferenceDefaults;
 static NSMutableDictionary *kbPropCache;
 static NSString *lightSymbolsColour, *darkSymbolsColour;
 static bool hapticFeedbackEnabled = YES;
@@ -27,10 +28,14 @@ static bool hapticCancelEnabled = NO;
 static double symbolFontScale = 0.7;
 static double flickBias = 1.0;
 
+static id prefValue(NSString *key) {
+	return preferences[key] ?: preferenceDefaults[key];
+}
+
 static id kbFetchProp(NSString *key) {
 	id value = kbPropCache[key];
 	if (value == nil) {
-		value = [preferences objectForKey:key];
+		value = prefValue(key);
 		kbPropCache[key] = value;
 	}
 	return value;
@@ -638,13 +643,14 @@ static NSInteger resolveHapticStyle(NSString *name) {
 }
 
 static void syncPreferences() {
-	lightSymbolsColour = resolveColour([preferences objectForKey:@"lightSymbols"]);
-	darkSymbolsColour = resolveColour([preferences objectForKey:@"darkSymbols"]);
-	hapticFeedbackEnabled = [preferences boolForKey:@"hapticFeedback"];
-	hapticStyle = resolveHapticStyle([preferences objectForKey:@"hapticStrength"]);
-	hapticCancelEnabled = [preferences boolForKey:@"hapticCancelFeedback"];
-	symbolFontScale = resolveSymbolScale([preferences objectForKey:@"symbolSize"]);
-	flickBias = resolveFlickBias([preferences objectForKey:@"flickRadius"]);
+	preferences = [NFPPrefs load];
+	lightSymbolsColour = resolveColour(prefValue(@"lightSymbols"));
+	darkSymbolsColour = resolveColour(prefValue(@"darkSymbols"));
+	hapticFeedbackEnabled = [prefValue(@"hapticFeedback") boolValue];
+	hapticStyle = resolveHapticStyle(prefValue(@"hapticStrength"));
+	hapticCancelEnabled = [prefValue(@"hapticCancelFeedback") boolValue];
+	symbolFontScale = resolveSymbolScale(prefValue(@"symbolSize"));
+	flickBias = resolveFlickBias(prefValue(@"flickRadius"));
 	[kbPropCache removeAllObjects];
 	[[%c(UIKeyboardCache) sharedInstance] purge];
 	// maybe also [UIKBRenderer clearInternalCaches] ??
@@ -654,18 +660,19 @@ static void syncPreferences() {
 %ctor {
 	kbPropCache = [NSMutableDictionary dictionary];
 
-	preferences = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
-	[preferences registerDefaults:@{
+	preferenceDefaults = @{
 		@"lightSymbols": @"lgrey",
 		@"darkSymbols": @"lgrey",
 		@"hapticFeedback": @YES,
 		@"hapticStrength": @"selection",
 		@"hapticCancelFeedback": @NO,
 		@"symbolSize": @"medium"
-	}];
-	[preferences registerPreferenceChangeBlock:^{
+	};
+	syncPreferences();
+	int token;
+	notify_register_dispatch(NFP_PREFS_CHANGED, &token, dispatch_get_main_queue(), ^(int t) {
 		syncPreferences();
-	}];
+	});
 
 	// trick thanks to poomsmart
 	// https://github.com/PoomSmart/EmojiPort-Legacy/blob/8573de11226ac2e1c4108c044078109dbfb07a02/KBResizeLegacy.xm

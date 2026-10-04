@@ -2,9 +2,8 @@
 #import <Preferences/PSSpecifier.h>
 #import "NFPKeyPropsController.h"
 #import "../Utils.h"
-#import <Cephei/HBPreferences.h>
+#import "../NFPPrefs.h"
 #include <objc/runtime.h>
-#import <notify.h>
 
 // not nice, but Theos is missing this >.<
 @interface PSConfirmationSpecifier : PSSpecifier
@@ -70,9 +69,8 @@ enum {
 		NSString *slicedKeyplaneName = [_keyplane.name sliceAfterLastUnderscore];
 		self.title = [slicedKeyplaneName hyphensToSpaces];
 
-		_hbPrefs = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
 		_prefKey = [NSString stringWithFormat:@"kb-%@--%@--flicks", layoutName, slicedKeyplaneName];
-		NSDictionary *storedConfig = [_hbPrefs objectForKey:_prefKey];
+		NSDictionary *storedConfig = [NFPPrefs load][_prefKey];
 		if (storedConfig == nil) {
 			UIKBTree *keylayout = _keyplane.subtrees[0];
 			UIKBTree *gestureKeyplane = [_keyboard subtreeWithName:_keyplane.gestureKeyplaneName];
@@ -253,8 +251,7 @@ enum {
 
 
 - (void)writeSettings {
-	[_hbPrefs setObject:[NSDictionary dictionaryWithDictionary:_configData] forKey:_prefKey];
-	notify_post("org.wuffs.flickplus/ReloadPrefs");
+	[NFPPrefs setObject:[NSDictionary dictionaryWithDictionary:_configData] forKey:_prefKey];
 }
 
 @end

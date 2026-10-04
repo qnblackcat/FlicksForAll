@@ -1,7 +1,7 @@
 // #import <CepheiPrefs/HBRootListController.h>
-#import <Preferences/PSListController.h>
+#import "NFPListController.h"
 
 // @interface NFPRootListController : HBRootListController
-@interface NFPRootListController : PSListController <UIDocumentPickerDelegate>
+@interface NFPRootListController : NFPListController <UIDocumentPickerDelegate>
 
 @end

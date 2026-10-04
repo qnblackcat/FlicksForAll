@@ -1,4 +1,4 @@
-TARGET=iphone:clang:16.5:16.0
+TARGET=iphone:clang:16.5:15.0
 
 include $(THEOS)/makefiles/common.mk
 
@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 BUNDLE_NAME = FlickPlusPrefs
 ARCHS = arm64 arm64e
 
-FlickPlusPrefs_FILES = NFPRootListController.m NFPKeyboardController.m NFPKeyplaneController.m NFPKeyPropsController.m
+FlickPlusPrefs_FILES = NFPRootListController.m NFPKeyboardController.m NFPKeyplaneController.m NFPKeyPropsController.m NFPListController.m ../NFPPrefs.m
 FlickPlusPrefs_INSTALL_PATH = /Library/PreferenceBundles
 FlickPlusPrefs_FRAMEWORKS = UIKit UniformTypeIdentifiers
 FlickPlusPrefs_EXTRA_FRAMEWORKS += Cephei CepheiPrefs

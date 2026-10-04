@@ -8,17 +8,12 @@
 #import "../h/UIKeyboardInputMode.h"
 #import "../h/UIKeyboardInputModeController.h"
 #import "../h/UIKeyboardCache.h"
+#import "../NFPPrefs.h"
 #include <objc/runtime.h>
-#include <notify.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface HBRespringController (TerribleHack)
 + (NSURL *)_preferencesReturnURL;
-@end
-
-@interface PSListController (Private)
-- (id)readPreferenceValue:(PSSpecifier *)specifier;
-- (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier;
 @end
 
 @implementation NFPRootListController
@@ -30,8 +25,19 @@
 // all of this can be removed once libpackageinfo is updated
 // so Cephei works properly again
 
+// settings used to go through cfprefsd, carry them over to NFPPrefs once
++ (void)migrateOldPreferences {
+	if ([[NSFileManager defaultManager] fileExistsAtPath:[NFPPrefs path]])
+		return;
+	NSDictionary *old = [[[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"] dictionaryRepresentation];
+	if (old.count > 0)
+		[NFPPrefs replaceAll:old];
+}
+
 - (NSArray *)specifiers {
 	if (!_specifiers) {
+		[NFPRootListController migrateOldPreferences];
+
 		NSMutableArray *specs = [[self loadSpecifiersFromPlistName:@"Root" target:self] mutableCopy];
 
 		// cephei does this for us once we use its listcontroller
@@ -111,10 +117,9 @@
 // presets are a plist wrapping every stored preference, custom flick
 // symbols included, plus a marker so we don't import random plists
 - (void)exportPresetTapped:(PSSpecifier *)specifier {
-	HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
 	NSDictionary *preset = @{
 		@"FlicksForAllPreset": @1,
-		@"preferences": [prefs dictionaryRepresentation] ?: @{}
+		@"preferences": [NFPPrefs load]
 	};
 
 	NSError *error = nil;
@@ -152,11 +157,7 @@
 		preferredStyle:UIAlertControllerStyleAlert];
 	[confirm addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
 	[confirm addAction:[UIAlertAction actionWithTitle:@"Import" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
-		HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
-		[prefs removeAllObjects];
-		for (NSString *key in values)
-			[prefs setObject:values[key] forKey:key];
-		notify_post("org.wuffs.flickplus/ReloadPrefs");
+		[NFPPrefs replaceAll:values];
 		[self reloadSpecifiers];
 	}]];
 	// the picker may still be dismissing, so present once it's gone
@@ -167,8 +168,7 @@
 
 
 - (void)resetSettingsTapped:(PSSpecifier *)specifier {
-	HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"org.wuffs.flickplus"];
-	[prefs removeAllObjects];
+	[NFPPrefs replaceAll:@{}];
 	[self reloadSpecifiers];
 }
 
