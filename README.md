@@ -4,6 +4,13 @@ iPad-style key flicks on the iPhone keyboard. Flick down on a key to type the sy
 
 **Requires:** iOS 15 or later (rootless & roothide) and [Cephei](https://github.com/hbang/libcephei).
 
+## Install
+
+Download the right package from the [`packages`](packages) folder and install it with your package manager:
+
+- **Rootless**: `org.wuffs.flickplus_<version>_iphoneos-arm64.deb`
+- **Roothide**: `org.wuffs.flickplus_<version>_iphoneos-arm64e.deb`
+
 ## Settings
 
 All of these are in **Settings > FlicksForAll** and apply instantly, with no respring needed.
