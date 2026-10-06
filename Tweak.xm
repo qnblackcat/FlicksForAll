@@ -607,16 +607,17 @@ static NSString *resolveColour(NSString *name) {
 // key so existing choices carry over. it scales every threshold in
 // movementRulesOutFlick (lower = more eager to start a swipe)
 static double resolveFlickBias(NSString *name) {
+	// evenly spaced; anything below 0.7 made flicks nearly impossible to trigger
 	if ([name isEqualToString:@"vshort"]) {
-		return 0.55;
-	} else if ([name isEqualToString:@"short"]) {
 		return 0.7;
+	} else if ([name isEqualToString:@"short"]) {
+		return 0.925;
 	} else if ([name isEqualToString:@"long"]) {
-		return 1.3;
+		return 1.375;
 	} else if ([name isEqualToString:@"wide"]) {
 		return 1.6;
 	} else {
-		return 1.0;
+		return 1.15;
 	}
 }
 
