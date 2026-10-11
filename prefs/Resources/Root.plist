@@ -2,8 +2,8 @@
     items = (
         {
             cell = PSGroupCell;
-            label = "Arbitrary Text Field";
-            footerText = "Tap above to open a keyboard, which you can conveniently use to preview your settings.";
+            label = "⌨️ Arbitrary Text Field";
+            footerText = "Tap above to open a keyboard, which you can conveniently use to preview your settings. All settings below will take effect immediately.";
         },
         {
             cell = PSEditTextCell;
@@ -11,8 +11,8 @@
 
         {
             cell = PSGroupCell;
-            label = "Flick Sensitivity";
-            footerText = "How easily a downward gesture on a key counts as a flick. Higher sensitivity lets your finger wander more before it switches to swipe-typing. If you swipe-type a lot, pick a lower setting.";
+            label = "👆 Flick Sensitivity";
+            footerText = "How easily a downward gesture on a key counts as a flick. Higher sensitivity lets your finger wander more before it switches to swipe-typing. If you Slide to type a lot, pick a lower setting.";
         },
         {
             cell = PSSegmentCell;
@@ -27,8 +27,8 @@
 
         {
             cell = PSGroupCell;
-            label = "Haptic Feedback";
-            footerText = "Plays a tick each time your finger slides onto a symbol while flicking. Feedback on Cancel buzzes if a flick you started turns into swipe-typing. Changes take effect immediately.";
+            label = "📳 Haptic Feedback";
+            footerText = "Plays a tick each time your finger slides onto a symbol while flicking. Feedback on Cancel buzzes if a flick you started turns into swipe-typing.";
         },
         {
             cell = PSSwitchCell;
@@ -60,7 +60,7 @@
 
         {
             cell = PSGroupCell;
-            label = "Symbol Size";
+            label = "🔠 Symbol Size";
             footerText = "Sets the size of the symbols that appear on the top of the keys.";
         },
         {
@@ -76,7 +76,7 @@
 
         {
             cell = PSGroupCell;
-            label = "Symbol Colours";
+            label = "🎨 Symbol Colours";
             footerText = "Sets the colour of the symbols that appear on the top of the keys.";
         },
         {
@@ -107,12 +107,12 @@
         {
             cell = PSGroupCell;
             id = activeLayouts;
-            label = "Active Layouts";
+            label = "🌐 Active Layouts";
         },
 
         {
             cell = PSGroupCell;
-            label = "Tools";
+            label = "🛠️ Tools";
             footerText = "Export saves all of your settings, custom flick symbols included, to a file you can back up or share. Import replaces your current settings with one of those files. Reset Settings clears everything, so use it only in case of emergency.";
         },
         {
@@ -138,7 +138,7 @@
 
         {
             cell = PSGroupCell;
-            label = "Donate";
+            label = "☕️ Donate";
             footerText = "This tweak is free and open-source. If you like it, feel free to throw some money at me (no pressure though!)";
         },
         {
@@ -163,7 +163,7 @@
 
         {
             cell = PSGroupCell;
-            label = "Twitter";
+            label = "🐦 Twitter";
             footerText = "You'll probably regret following me, but it's there if you really want to.";
         },
         {
@@ -176,7 +176,8 @@
 
         {
             cell = PSGroupCell;
-            label = "Source Code";
+            label = "💻 Source Code";
+            footerText = "© 2026 Qn (Đạt Nguyễn)";
         },
         {
             cell = PSButtonCell;
