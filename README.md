@@ -3,6 +3,11 @@
 iPad-style key flicks on the iPhone keyboard. Flick down on a key to type the symbol shown at its top, and tap it as usual to type the letter. Swipe-typing still works.
 
 **Requires:** iOS 15 or later (rootless & roothide).
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/75686599-5e1a-4b8c-8c80-16f7a8757fdb" width="30%" alt="IMG_3106" />
+  <img src="https://github.com/user-attachments/assets/5e93295b-6f9e-4f93-8334-c40657326580" width="30%" alt="IMG_3107" />
+  <img src="https://github.com/user-attachments/assets/de212527-d1b3-4ddd-9475-21c407b11c41" width="30%" alt="IMG_3108" />
+</p>
 
 ## Install
 
