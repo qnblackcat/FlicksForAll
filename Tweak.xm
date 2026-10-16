@@ -329,12 +329,18 @@ static NSString *currencyFix(NSString *str) {
 
 	NSDictionary *config = kbFetchProp(kbName);
 	if (config == nil) {
-		NSLog(@"Can't find config %@!! Using a default...", kbName);
-		UIKBTree *keylayout = self.subtrees[0];
-		UIKBTree *subKeylayout = keylayout.cachedGestureLayout;
-		config = [keylayout nfpGenerateKeylayoutConfigBasedOffKeylayout:subKeylayout inKeyplane:self rewriteCapitalToSmall:replaceCapitalBySmall];
-		// we store this in the propcache but not to preferences
-		kbPropCache[kbName] = config;
+		// variants sharing a config (e.g. QWERTY and QWERTY-AlphaWithURL) can have
+		// different gesture planes, so cache each keyplane's default on its own
+		NSString *defaultKey = [@"default:" stringByAppendingString:self.name];
+		config = kbPropCache[defaultKey];
+		if (config == nil) {
+			NSLog(@"Can't find config %@!! Using a default...", kbName);
+			UIKBTree *keylayout = self.subtrees[0];
+			UIKBTree *subKeylayout = keylayout.cachedGestureLayout;
+			config = [keylayout nfpGenerateKeylayoutConfigBasedOffKeylayout:subKeylayout inKeyplane:self rewriteCapitalToSmall:replaceCapitalBySmall];
+			// we store this in the propcache but not to preferences
+			kbPropCache[defaultKey] = config;
+		}
 	}
 
 	for (UIKBTree *keylayout in self.subtrees) {
@@ -391,24 +397,36 @@ static NSString *currencyFix(NSString *str) {
 %hook TUIKBGraphSerialization
 
 - (UIKBTree *)keyboardForName:(NSString *)name {
-	// TODO: do not patch the same keyboard multiple times!
 	UIKBTree *tree = %orig;
 
 	NSString *cleanName = name;
 
 	// for now, we exclude certain ones...
-	if ([cleanName hasSuffix:@"-URL"]) return tree;
-	if ([cleanName hasSuffix:@"-NumberPad"]) return tree;
-	if ([cleanName hasSuffix:@"-PhonePad"]) return tree;
-	if ([cleanName hasSuffix:@"-NamePhonePad"]) return tree;
-	if ([cleanName hasSuffix:@"-Email"]) return tree;
-	if ([cleanName hasSuffix:@"-DecimalPad"]) return tree;
-	if ([cleanName hasSuffix:@"-AlphaWithURL"]) return tree;
+	for (NSString *suffix in @[@"-URL", @"-NumberPad", @"-PhonePad", @"-NamePhonePad", @"-Email", @"-DecimalPad"]) {
+		if ([cleanName hasSuffix:suffix]) return tree;
+	}
 	if ([cleanName containsString:@"Emoji"]) return tree;
+	if (tree == nil)
+		return nil;
+
+	// Keyboard trees are cached and may be returned by name more than once.
+	static NSHashTable *patchedKeyboards;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		patchedKeyboards = [NSHashTable weakObjectsHashTable];
+	});
+	@synchronized (patchedKeyboards) {
+		if ([patchedKeyboards containsObject:tree])
+			return tree;
+		[patchedKeyboards addObject:tree];
+	}
 
 	// Twitter keyboard just uses standard stuff
 	if ([cleanName hasSuffix:@"-Twitter"])
 		cleanName = [cleanName substringToIndex:(cleanName.length - 8)];
+	// so does the web search one (Safari's address bar), share its config
+	if ([cleanName hasSuffix:@"-AlphaWithURL"])
+		cleanName = [cleanName substringToIndex:(cleanName.length - 13)];
 
 	// take out iPhone-{variant}-
 	if ([cleanName hasPrefix:@"iPhone-"]) {
