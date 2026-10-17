@@ -9,13 +9,6 @@ iPad-style key flicks on the iPhone keyboard. Flick down on a key to type the sy
   <img src="https://github.com/user-attachments/assets/de212527-d1b3-4ddd-9475-21c407b11c41" width="30%" alt="IMG_3108" />
 </p>
 
-## Install
-
-Download the right package from the [`packages`](packages) folder and install it with your package manager:
-
-- **Rootless**: `org.wuffs.flickplus_<version>_iphoneos-arm64.deb`
-- **Roothide**: `org.wuffs.flickplus_<version>_iphoneos-arm64e.deb`
-
 ## Settings
 
 All of these are in **Settings > FlicksForAll** and apply instantly, with no respring needed.
@@ -24,8 +17,14 @@ All of these are in **Settings > FlicksForAll** and apply instantly, with no res
 - **Haptic Feedback**: a tick while sliding onto a symbol, with five strengths, plus an optional buzz when a flick turns into swipe-typing.
 - **Symbol Size / Colours**: how the symbols on the keys look.
 - **Active Layouts**: choose what each key types when flicked, separately for each keyboard layout.
+- **Other Settings** (all off by default):
+  - **Hide Paste Permission Alert**: skips the "Allow Paste" prompt added in iOS 16.
+  - **Hide "Pasted from" Banner**: removes the "X pasted from Y" notice.
+  - **Hide Keyboard Settings in 🌐 Menu**: removes Keyboard Settings, Dictation Settings and the one-handed keyboard buttons from the globe key menu.
+  - **Replace Dictation with Hide Keyboard**: replace the mic below the keyboard with the hide keyboard button; hold it to dictate. Face ID iPhones only.
 - **Tools**: export, import, or reset your settings.
 
 ## Credits
 
-Original tweak by [Ninji (Treeki)](https://github.com/Treeki/FlicksForAll). The changes in this fork by [qnblackcat](https://github.com/qnblackcat/FlicksForAll) were coded with [Claude](https://claude.com/claude-code).
+- Original tweak by [Ninji (Treeki)](https://github.com/Treeki/FlicksForAll). 
+- Other Settings are based on [NoPasteAlerts16](https://github.com/0xkuj/NoPasteAlerts16) by 0xkuj, and [NoPastedFrom](https://github.com/qnblackcat/NoPastedFrom) and [NoKeyboardSettings](https://github.com/brendonjkding/NoKeyboardSettings) by Brend0n.

@@ -1,0 +1,6 @@
+#!/bin/sh
+# druid keeps running across installs and resprings, so restart it to
+# load (or drop) the "pasted from" banner hook. launchd relaunches it on
+# the next paste
+killall druid 2>/dev/null || true
+exit 0

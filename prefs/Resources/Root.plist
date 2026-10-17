@@ -112,6 +112,44 @@
 
         {
             cell = PSGroupCell;
+            label = "⚙️ Other Settings";
+            footerText = "• Hide Paste Permission Alert: skips the \"Allow Paste\" prompt (iOS 16+).\n• Hide \"Pasted from\" Banner: removes the 'X pasted from Y' notice after pasting.\n• Hide Keyboard Settings: removes Keyboard Settings, Dictation Settings and the one-handed keyboard buttons from the 🌐 menu.\n• Replace Dictation with Hide Keyboard: hold the Hide Keyboard button to dictate (Face ID iPhones only).";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Hide Paste Permission Alert";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = noPasteAlerts;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Hide \"Pasted from\" Banner";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = noPastedFrom;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Hide Keyboard Settings in 🌐 Menu";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = noKeyboardSettings;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Replace Dictation with Hide Keyboard";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = dictationHidesKeyboard;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+
+        {
+            cell = PSGroupCell;
             label = "🛠️ Tools";
             footerText = "Export saves all of your settings, custom flick symbols included, to a file you can back up or share. Import replaces your current settings with one of those files. Reset Settings clears everything, so use it only in case of emergency.";
         },

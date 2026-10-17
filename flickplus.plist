@@ -1,1 +1,1 @@
-{ Filter = { Bundles = ( "com.apple.TextInput" ); }; }
+{ Filter = { Mode = "Any"; Bundles = ( "com.apple.TextInput" ); Executables = ( "druid" ); }; }

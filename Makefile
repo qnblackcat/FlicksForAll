@@ -1,5 +1,5 @@
 TARGET=iphone:clang:16.5:15.0
-INSTALL_TARGET_PROCESSES = SpringBoard
+INSTALL_TARGET_PROCESSES = SpringBoard druid
 ARCHS = arm64 arm64e
 FINALPACKAGE = 1
 
