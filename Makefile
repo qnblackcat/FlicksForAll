@@ -7,7 +7,8 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = flickplus
 
-flickplus_FILES = Tweak.xm Utils.m NFPPrefs.m
+flickplus_FILES = Tweak.xm OtherSettings.xm ShiftDelete.x Utils.m NFPPrefs.m
+flickplus_FRAMEWORKS = UIKit QuartzCore
 flickplus_CFLAGS = -fobjc-arc -Wno-c++11-extensions
 
 include $(THEOS_MAKE_PATH)/tweak.mk

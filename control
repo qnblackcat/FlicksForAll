@@ -1,9 +1,9 @@
 Package: org.wuffs.flickplus
 Name: FlicksForAll
 Depends: mobilesubstrate, preferenceloader, firmware (>= 15.0)
-Conflicts: com.0xkuj.nopastealerts16, com.brend0n.nopastedfrom, com.brend0n.nokeyboardsettings
-Replaces: com.0xkuj.nopastealerts16, com.brend0n.nopastedfrom, com.brend0n.nokeyboardsettings
-Version: 0.3.0
+Conflicts: com.0xkuj.nopastealerts16, com.brend0n.nopastedfrom, com.brend0n.nokeyboardsettings, jp.r-plus.deletecut
+Replaces: com.0xkuj.nopastealerts16, com.brend0n.nopastedfrom, com.brend0n.nokeyboardsettings, jp.r-plus.deletecut
+Version: 0.4.0
 Architecture: iphoneos-arm
 Description: iPad-like key flicks on iPhone
 Maintainer: Ninji <ninji@wuffs.org>

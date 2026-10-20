@@ -1,0 +1,25 @@
+{
+    items = (
+        {
+            cell = PSGroupCell;
+            footerText = "• Shift Hold + Delete: hold Shift and tap Delete to remove the word before the caret. The Delete key turns red.\n• Shift Lock (Caps Lock) + Delete: with Caps Lock on, Delete removes a whole word each tap. The Delete key turns orange.";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Shift Hold + Delete";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = shiftDeleteShiftHold;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSSwitchCell;
+            label = "Shift Lock (Caps Lock) + Delete";
+            default = 0;
+            defaults = "org.wuffs.flickplus";
+            key = shiftDeleteShiftLock;
+            PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+    );
+    title = ShiftDelete;
+}

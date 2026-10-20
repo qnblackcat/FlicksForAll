@@ -113,7 +113,7 @@
         {
             cell = PSGroupCell;
             label = "⚙️ Other Settings";
-            footerText = "• Hide Paste Permission Alert: skips the \"Allow Paste\" prompt (iOS 16+).\n• Hide \"Pasted from\" Banner: removes the 'X pasted from Y' notice after pasting.\n• Hide Keyboard Settings: removes Keyboard Settings, Dictation Settings and the one-handed keyboard buttons from the 🌐 menu.\n• Replace Dictation with Hide Keyboard: hold the Hide Keyboard button to dictate (Face ID iPhones only).";
+            footerText = "• Hide Paste Permission Alert: skips the \"Allow Paste\" prompt (iOS 16+).\n• Hide \"Pasted from\" Banner: removes the 'X pasted from Y' notice after pasting.\n• Hide Keyboard Settings: removes Keyboard Settings, Dictation Settings and the one-handed keyboard buttons from the 🌐 menu.\n• Replace Dictation with Hide Keyboard: hold the Hide Keyboard button to dictate (Face ID iPhones only).\n• Shift Delete: hold Shift or turn on Shift Lock to make Delete remove a whole word.";
         },
         {
             cell = PSSwitchCell;
@@ -146,6 +146,11 @@
             defaults = "org.wuffs.flickplus";
             key = dictationHidesKeyboard;
             PostNotification = "org.wuffs.flickplus/ReloadPrefs";
+        },
+        {
+            cell = PSLinkCell;
+            label = "Shift Delete";
+            detail = NFPShiftDeleteController;
         },
 
         {

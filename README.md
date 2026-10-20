@@ -22,6 +22,7 @@ All of these are in **Settings > FlicksForAll** and apply instantly, with no res
   - **Hide "Pasted from" Banner**: removes the "X pasted from Y" notice.
   - **Hide Keyboard Settings in 🌐 Menu**: removes Keyboard Settings, Dictation Settings and the one-handed keyboard buttons from the globe key menu.
   - **Replace Dictation with Hide Keyboard**: replace the mic below the keyboard with the hide keyboard button; hold it to dictate. Face ID iPhones only.
+  - **Shift Delete**: separate switches for Shift Hold + Delete and Shift Lock (Caps Lock) + Delete, which make Delete remove the word before the caret. The Delete key turns red or orange while it's active.
 - **Tools**: export, import, or reset your settings.
 
 ## Credits
