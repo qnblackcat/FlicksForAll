@@ -33,11 +33,25 @@ static id prefValue(NSString *key) {
 	return preferences[key] ?: preferenceDefaults[key];
 }
 
+// kbPropCache is touched from the keyboard's threads and cleared from the
+// main queue when prefs change, so every access goes through these
+static id kbCacheGet(NSString *key) {
+	@synchronized (kbPropCache) {
+		return kbPropCache[key];
+	}
+}
+
+static void kbCacheSet(NSString *key, id value) {
+	@synchronized (kbPropCache) {
+		kbPropCache[key] = value;
+	}
+}
+
 static id kbFetchProp(NSString *key) {
-	id value = kbPropCache[key];
+	id value = kbCacheGet(key);
 	if (value == nil) {
 		value = prefValue(key);
-		kbPropCache[key] = value;
+		kbCacheSet(key, value);
 	}
 	return value;
 }
@@ -68,8 +82,10 @@ static void playClickFeedback() {
 %property (nonatomic, assign) bool fpAllow;
 %property (nonatomic, retain) UIKBTree *fpFlickKey;
 - (id)init {
-	self.fpAllow = false;
-	return %orig;
+	self = %orig;
+	if (self)
+		self.fpAllow = false;
+	return self;
 }
 %end
 
@@ -157,26 +173,11 @@ static bool movementRulesOutFlick(UIKBTree *key, CGPoint delta) {
 	doingDragOnKey = false;
 }
 
+// deliberately no %orig: the original reset makes the flick preview appear late
 - (void)resetPanAlternativesForEndedTouch:(id)touch {
 	clickFeedback = nil;
 	cancelFeedback = nil;
 	flickArmed = false;
-}
-%end
-
-%hook UIKBTree
-- (void)setSelectedVariantIndex:(long long)index {
-	if (doingDragOnKey && self.selectedVariantIndex != index) {
-		// 0 and 1 are the flick symbols, anything else means none is selected
-		flickArmed = (index == 0 || index == 1);
-
-		if (clickFeedback != nil) {
-			// tick while sliding through variants
-			playClickFeedback();
-			[clickFeedback prepare];
-		}
-	}
-	%orig;
 }
 %end
 
@@ -291,6 +292,20 @@ static NSString *currencyFix(NSString *str) {
 }
 
 %hook UIKBTree
+- (void)setSelectedVariantIndex:(long long)index {
+	if (doingDragOnKey && self.selectedVariantIndex != index) {
+		// 0 and 1 are the flick symbols, anything else means none is selected
+		flickArmed = (index == 0 || index == 1);
+
+		if (clickFeedback != nil) {
+			// tick while sliding through variants
+			playClickFeedback();
+			[clickFeedback prepare];
+		}
+	}
+	%orig;
+}
+
 - (int)displayTypeHint {
 	int type = %orig;
 	if (lieAboutGestureKeys && type == 10)
@@ -324,7 +339,7 @@ static NSString *currencyFix(NSString *str) {
 			kbName = [self stringForProperty:@"fp-kb-altname"];
 			replaceCapitalBySmall = YES;
 			if (flag == nil)
-				kbPropCache[propName] = @NO;
+				kbCacheSet(propName, @NO);
 		}
 	}
 
@@ -333,14 +348,14 @@ static NSString *currencyFix(NSString *str) {
 		// variants sharing a config (e.g. QWERTY and QWERTY-AlphaWithURL) can have
 		// different gesture planes, so cache each keyplane's default on its own
 		NSString *defaultKey = [@"default:" stringByAppendingString:self.name];
-		config = kbPropCache[defaultKey];
+		config = kbCacheGet(defaultKey);
 		if (config == nil) {
 			NSLog(@"Can't find config %@!! Using a default...", kbName);
 			UIKBTree *keylayout = self.subtrees[0];
 			UIKBTree *subKeylayout = keylayout.cachedGestureLayout;
 			config = [keylayout nfpGenerateKeylayoutConfigBasedOffKeylayout:subKeylayout inKeyplane:self rewriteCapitalToSmall:replaceCapitalBySmall];
 			// we store this in the propcache but not to preferences
-			kbPropCache[defaultKey] = config;
+			kbCacheSet(defaultKey, config);
 		}
 	}
 
@@ -673,7 +688,9 @@ static void syncPreferences() {
 	hapticCancelEnabled = [prefValue(@"hapticCancelFeedback") boolValue];
 	symbolFontScale = resolveSymbolScale(prefValue(@"symbolSize"));
 	flickBias = resolveFlickBias(prefValue(@"flickRadius"));
-	[kbPropCache removeAllObjects];
+	@synchronized (kbPropCache) {
+		[kbPropCache removeAllObjects];
+	}
 	[[%c(UIKeyboardCache) sharedInstance] purge];
 	// maybe also [UIKBRenderer clearInternalCaches] ??
 }

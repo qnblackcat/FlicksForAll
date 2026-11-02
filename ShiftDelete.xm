@@ -9,6 +9,7 @@
 
 @interface UIKBKeyView : UIView
 @property (nonatomic, readonly) UIKBTree *key;
+@property (nonatomic, strong) CALayer *sdLayer;
 - (UIImage *)_generateBackdropMaskImage;
 @end
 
@@ -61,7 +62,6 @@ static BOOL sdHidden = YES; // YES = not in delete-cut mode
 static UIColor *sdColor;
 static SDMode sdMode = SDModeNone;
 static NSHashTable<CALayer *> *sdLayers;
-static char kSDLayerKey;
 
 // nil when the mode is switched off, so it never turns on
 static UIColor *SDColorForMode(bool enabled, UIColor *color) {
@@ -82,16 +82,7 @@ static void SDSetMode(BOOL hide, UIColor *color, SDMode mode) {
 }
 
 @interface UITouch (ShiftDelete)
-@property (nonatomic, assign, getter=isStartedFromShiftKeySD) BOOL startedFromShiftKeySD;
-@end
-
-@implementation UITouch (ShiftDelete)
-- (void)setStartedFromShiftKeySD:(BOOL)value {
-	objc_setAssociatedObject(self, @selector(isStartedFromShiftKeySD), @(value), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-- (BOOL)isStartedFromShiftKeySD {
-	return [objc_getAssociatedObject(self, @selector(isStartedFromShiftKeySD)) boolValue];
-}
+@property (nonatomic, assign) BOOL startedFromShiftKeySD;
 @end
 
 static UIKeyboardImpl *SDImpl(void) {
@@ -170,16 +161,22 @@ static void SDCancelSwipeSelection(void) {
 
 %group ShiftDelete
 
+%hook UITouch
+%property (nonatomic, assign) BOOL startedFromShiftKeySD;
+%end
+
 %hook UIKBKeyView
+%property (nonatomic, strong) CALayer *sdLayer;
+
 - (void)layoutSubviews {
 	%orig;
 	if (![[self.key name] hasPrefix:@"Delete"]) return;
 
-	CALayer *layer = objc_getAssociatedObject(self, &kSDLayerKey);
+	CALayer *layer = self.sdLayer;
 	if (!layer) {
 		layer = [CALayer layer];
 		layer.name = @"ShiftDelete";
-		objc_setAssociatedObject(self, &kSDLayerKey, layer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		self.sdLayer = layer;
 		[sdLayers addObject:layer];
 	}
 
@@ -192,8 +189,9 @@ static void SDCancelSwipeSelection(void) {
 	// put the colour under the key's symbol layer, like the original did
 	// on iOS 13/14 (_keyLayers[@6])
 	NSDictionary *keyLayers = nil;
-	Ivar ivar = class_getInstanceVariable(object_getClass(self), "_keyLayers");
-	if (ivar) keyLayers = object_getIvar(self, ivar);
+	// MSHookIvar misbehaves on a missing ivar, so check it exists first
+	if (class_getInstanceVariable([self class], "_keyLayers"))
+		keyLayers = MSHookIvar<NSDictionary *>(self, "_keyLayers");
 	CALayer *symbolLayer = [keyLayers isKindOfClass:[NSDictionary class]] ? keyLayers[@6] : nil;
 	if (symbolLayer && symbolLayer.superlayer == self.layer) {
 		if (layer.superlayer != self.layer || [self.layer.sublayers indexOfObject:layer] > [self.layer.sublayers indexOfObject:symbolLayer])
@@ -285,7 +283,7 @@ static void SDCancelSwipeSelection(void) {
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
 	%orig;
-	if (touches.anyObject.isStartedFromShiftKeySD)
+	if (touches.anyObject.startedFromShiftKeySD)
 		SDSetMode(YES, nil, SDModeNone);
 }
 
